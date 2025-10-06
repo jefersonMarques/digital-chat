@@ -51,24 +51,24 @@ export default defineConfig({
         // setting dir: isLibraryMode ? 'public/packs' : undefined will not work
         ...(isLibraryMode
           ? {
-              dir: 'public/packs',
-              entryFileNames: chunkInfo => {
-                if (chunkInfo.name === 'sdk') {
-                  return 'js/sdk.js';
-                }
-                return '[name].js';
-              },
-            }
+            dir: 'public/packs',
+            entryFileNames: chunkInfo => {
+              if (chunkInfo.name === 'sdk') {
+                return 'js/sdk.js';
+              }
+              return '[name].js';
+            },
+          }
           : {}),
         inlineDynamicImports: isLibraryMode, // Disable code-splitting for SDK
       },
     },
     lib: isLibraryMode
       ? {
-          entry: path.resolve(__dirname, './app/javascript/entrypoints/sdk.js'),
-          formats: ['iife'], // IIFE format for single file
-          name: 'sdk',
-        }
+        entry: path.resolve(__dirname, './app/javascript/entrypoints/sdk.js'),
+        formats: ['iife'], // IIFE format for single file
+        name: 'sdk',
+      }
       : undefined,
   },
   resolve: {
@@ -107,5 +107,23 @@ export default defineConfig({
     setupFiles: ['fake-indexeddb/auto', 'vitest.setup.js'],
     mockReset: true,
     clearMocks: true,
+  },
+  server: {
+    host: '0.0.0.0',
+    port: Number(process.env.VITE_PORT) || 3036,
+    strictPort: true,
+    hmr: {
+      host: process.env.VITE_HMR_HOST || 'localhost',
+      protocol: process.env.VITE_HMR_PROTOCOL || 'ws',
+      clientPort: Number(process.env.VITE_PORT) || 3036,
+    },
+    watch: {
+      usePolling: true,
+      interval: Number(process.env.CHOKIDAR_INTERVAL) || 150,
+      awaitWriteFinish: {
+        stabilityThreshold: 200,
+        pollInterval: 150,
+      },
+    },
   },
 });

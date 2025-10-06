@@ -1,6 +1,19 @@
 # Variables
 APP_NAME := chatwoot
 RAILS_ENV ?= development
+VITE_PORT ?= 3036
+
+# --- Vite / HMR (com polling para WSL / /mnt) ---
+vite:
+	BUILD_MODE= \
+	CHOKIDAR_USEPOLLING=1 \
+	CHOKIDAR_INTERVAL=150 \
+	VITE_USE_POLLING=1 \
+	VITE_PORT=$(VITE_PORT) \
+	VITE_HMR_HOST=127.0.0.1 \
+	VITE_RUBY_HOST=0.0.0.0 \
+	VITE_RUBY_PORT=$(VITE_PORT) \
+	bin/vite dev
 
 # Targets
 setup:
@@ -39,6 +52,27 @@ run:
 		overmind start -f Procfile.dev; \
 	fi
 
+# Rails + Vite (sem Overmind)
+dev: ## Rails + Vite (fallback caso não use Overmind)
+	( BUILD_MODE= \
+	  CHOKIDAR_USEPOLLING=1 \
+	  CHOKIDAR_INTERVAL=150 \
+	  VITE_USE_POLLING=1 \
+	  VITE_PORT=$(VITE_PORT) \
+	  VITE_HMR_HOST=127.0.0.1 \
+	  VITE_RUBY_HOST=0.0.0.0 \
+	  VITE_RUBY_PORT=$(VITE_PORT) \
+	  bin/vite dev ) & \
+	RAILS_ENV=$(RAILS_ENV) bundle exec rails server -b 0.0.0.0 -p 3000
+
+kill_ports:
+	-lsof -ti:3000,$(VITE_PORT) | xargs -r kill -9 || true
+	rm -f ./.overmind.sock
+	rm -f tmp/pids/*.pid
+
+debug_vite:
+	overmind connect vite
+
 force_run:
 	rm -f ./.overmind.sock
 	rm -f tmp/pids/*.pid
@@ -56,7 +90,7 @@ debug:
 debug_worker:
 	overmind connect worker
 
-docker: 
+docker:
 	docker build -t $(APP_NAME) -f ./docker/Dockerfile .
 
-.PHONY: setup db_create db_migrate db_seed db_reset db console server burn docker run force_run force_run_tunnel debug debug_worker
+.PHONY: setup db_create db_migrate db_seed db_reset db console server burn docker run force_run force_run_tunnel debug debug_worker vite dev kill_ports debug_vite

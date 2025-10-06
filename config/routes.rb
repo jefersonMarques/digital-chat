@@ -300,6 +300,28 @@ Rails.application.routes.draw do
           end
 
           resources :upload, only: [:create]
+
+          # Kanban de Vendas
+          resources :deal_pipelines, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              post :reorder # body: { order: [{id: 1, position: 1}, ...] }
+            end
+            resources :deal_stages, only: [:index, :show, :create, :update, :destroy] do
+              member do
+                post :reorder # body: { order: [{id: 1, position: 1}, ...] }
+              end
+            end
+          end
+          
+          resources :deals, only: [:index, :show, :create, :update, :destroy] do
+            member do
+              post :move    # body: { deal_stage_id: X, deal_pipeline_id: (opcional) }
+              post :win
+              post :lose
+              post :archive
+              post :reopen
+            end
+          end
         end
       end
       # end of account scoped api routes

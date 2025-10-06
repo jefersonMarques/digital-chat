@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_08_08_123008) do
+ActiveRecord::Schema[7.1].define(version: 2025_08_22_200728) do
   # These extensions should be enabled to support this database
   enable_extension "pg_stat_statements"
   enable_extension "pg_trgm"
@@ -737,6 +737,62 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_08_123008) do
     t.index ["account_id"], name: "index_data_imports_on_account_id"
   end
 
+  create_table "deal_pipelines", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.boolean "is_default", default: false, null: false
+    t.integer "position", default: 1, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_deal_pipelines_on_account_id_and_name", unique: true
+    t.index ["account_id", "position"], name: "index_deal_pipelines_on_account_id_and_position"
+  end
+
+  create_table "deal_stages", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "deal_pipeline_id", null: false
+    t.string "name", null: false
+    t.integer "position", default: 1, null: false
+    t.boolean "win_stage", default: false, null: false
+    t.boolean "lose_stage", default: false, null: false
+    t.integer "probability", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "deal_pipeline_id", "name"], name: "idx_deal_stages_account_pipeline_name", unique: true
+    t.index ["deal_pipeline_id", "position"], name: "index_deal_stages_on_deal_pipeline_id_and_position"
+    t.check_constraint "probability >= 0 AND probability <= 100", name: "deal_stages_probability_0_100"
+  end
+
+  create_table "deals", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "deal_pipeline_id", null: false
+    t.bigint "deal_stage_id", null: false
+    t.bigint "contact_id"
+    t.bigint "inbox_id"
+    t.bigint "conversation_id"
+    t.bigint "owner_id"
+    t.string "title", null: false
+    t.integer "amount_cents", default: 0, null: false
+    t.string "currency", limit: 3, default: "BRL", null: false
+    t.string "status", default: "open", null: false
+    t.string "source"
+    t.jsonb "custom_fields", default: {}, null: false
+    t.datetime "closed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_deals_on_account_id"
+    t.index ["contact_id"], name: "index_deals_on_contact_id"
+    t.index ["created_at"], name: "index_deals_on_created_at"
+    t.index ["custom_fields"], name: "index_deals_on_custom_fields", using: :gin
+    t.index ["deal_pipeline_id"], name: "index_deals_on_deal_pipeline_id"
+    t.index ["deal_stage_id"], name: "index_deals_on_deal_stage_id"
+    t.index ["owner_id"], name: "index_deals_on_owner_id"
+    t.index ["status"], name: "index_deals_on_status"
+    t.check_constraint "amount_cents >= 0", name: "deals_amount_cents_non_negative"
+    t.check_constraint "char_length(currency::text) = 3", name: "deals_currency_len_3"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'won'::character varying, 'lost'::character varying, 'archived'::character varying]::text[])", name: "deals_status_enum"
+  end
+
   create_table "email_templates", force: :cascade do |t|
     t.string "name", null: false
     t.text "body", null: false
@@ -1202,6 +1258,16 @@ ActiveRecord::Schema[7.1].define(version: 2025_08_08_123008) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "deal_pipelines", "accounts"
+  add_foreign_key "deal_stages", "accounts"
+  add_foreign_key "deal_stages", "deal_pipelines"
+  add_foreign_key "deals", "accounts", on_delete: :cascade
+  add_foreign_key "deals", "contacts", on_delete: :nullify
+  add_foreign_key "deals", "conversations", on_delete: :nullify
+  add_foreign_key "deals", "deal_pipelines", on_delete: :cascade
+  add_foreign_key "deals", "deal_stages", on_delete: :cascade
+  add_foreign_key "deals", "inboxes", on_delete: :nullify
+  add_foreign_key "deals", "users", column: "owner_id", on_delete: :nullify
   add_foreign_key "inboxes", "portals"
   create_trigger("accounts_after_insert_row_tr", :generated => true, :compatibility => 1).
       on("accounts").

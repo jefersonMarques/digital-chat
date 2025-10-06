@@ -132,6 +132,20 @@ const menuItems = computed(() => {
       },
     },
     {
+  name: 'Sales',
+  label: 'Vendas',
+  icon: 'i-lucide-briefcase',
+  children: [
+    {
+      name: 'Kanban',
+      label: 'Kanban de Vendas',
+      to: accountScopedRoute('sales_kanban'), // usa o name da rota
+      activeOn: ['sales_kanban'],
+    },
+  ],
+},
+
+    {
       name: 'Conversation',
       label: t('SIDEBAR.CONVERSATIONS'),
       icon: 'i-lucide-message-circle',

@@ -5,8 +5,24 @@ import dashboard from './dashboard/dashboard.routes';
 import store from 'dashboard/store';
 import { validateLoggedInRoutes } from '../helper/routeHelpers';
 import AnalyticsHelper from '../helper/AnalyticsHelper';
+import salesChildRoutes from './sales/sales.routes';
+
 
 const routes = [...dashboard.routes];
+
+// acha a rota-pai que renderiza o shell/Sidebar
+const accountsRoot = routes.find(r => r.path === '/app/accounts/:accountId');
+if (accountsRoot?.children) {
+  accountsRoot.children.push(...salesChildRoutes);
+} else {
+  // fallback (não deve acontecer, mas evita quebrar)
+  routes.push(
+    ...salesChildRoutes.map(r => ({
+      ...r,
+      path: `/app/accounts/:accountId/${r.path}`,
+    }))
+  );
+}
 
 export const router = createRouter({ history: createWebHistory(), routes });
 
